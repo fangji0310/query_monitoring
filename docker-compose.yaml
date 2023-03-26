@@ -1,0 +1,22 @@
+version: '3'
+services:
+  qmdb:
+    image: mysql:8.0.32-debian
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - ./docker/mysql/sql:/docker-entrypoint-initdb.d
+      - ./docker/mysql/conf:/etc/mysql/conf.d
+    ports:
+      - "127.0.0.1:3306:3306"
+  qmgo:
+    build:
+      context: .
+      dockerfile: ./docker/go/Dockerfile
+      args:
+        - target=dev
+    environment:
+      QUERY_MONITORING_TOOL_ENV: test
+    volumes:
+      - .:/usr/app/src
+    working_dir: /usr/app/src
