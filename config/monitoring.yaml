@@ -1,0 +1,7 @@
+monitoring:
+  - title: "サンプル1"
+    db: "sample1"
+    query: "select 1"
+  - title: "サンプル2"
+    db: "sample2"
+    query: "select 0"
