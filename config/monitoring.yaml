@@ -1,6 +1,12 @@
 - title: "サンプル1"
-  db: "sample1"
-  query: "select 1"
+  schedule_offset_min: 1
+  schedule_interval_min: 1
+  db: sample1
+  query: |
+    select 1 as metrics
 - title: "サンプル2"
-  db: "sample2"
-  query: "select 0"
+  schedule_offset_min: 1
+  schedule_interval_min: 1
+  db: sample2
+  query: |
+    select 0 as metrics

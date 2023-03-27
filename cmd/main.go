@@ -6,9 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"query_monitoring/db"
-	"query_monitoring/monitoring"
+	"query_monitoring/pkg/db"
+	"query_monitoring/pkg/policy"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
@@ -21,13 +22,24 @@ type QueryMonitoringStruct struct {
 }
 
 func main() {
+	startTime := time.Now()
 	environment := loadEnvironment()
 	q := loadQueryMonitoringSetting()
 	fmt.Printf("loading configuration manager. type: %s, ini: %s, yaml: %s\n", q.Type, q.IniPath, q.MonitoringYamlPath)
-	_ = db.InitializeFromIni(environment, q.IniPath)
-	fmt.Printf("loading monitoring yaml on %s\n", q.MonitoringYamlPath)
-	_ = monitoring.LoadPolicy(q.MonitoringYamlPath)
-	// TODO
+	queryManager := db.InitializeFromIni(environment, q.IniPath)
+	fmt.Printf("loading policy yaml on %s\n", q.MonitoringYamlPath)
+	monitoringPolicies := policy.LoadPolicy(q.MonitoringYamlPath)
+	for _, p := range monitoringPolicies {
+		if !p.IsExecute(startTime) {
+			fmt.Printf("skip %s\n", p.Title)
+			continue
+		}
+		err := p.Check(queryManager)
+		if err != nil {
+			fmt.Printf("%w\n", err)
+			continue
+		}
+	}
 }
 
 func loadQueryMonitoringSetting() QueryMonitoringStruct {
@@ -56,7 +68,7 @@ func loadEnvironment() string {
 	if !ok {
 		log.Panicln("Failed to get env.QUERY_MONITORING_TOOL_ENV")
 	}
-	if environment != "test" {
+	if environment != "local" && environment != "test" && environment != "production" {
 		log.Panicf("env.QUERY_MONITORING_TOOL_ENV is invalid.[%s]", environment)
 	}
 	executableFileDir := getExecutableFileDir()

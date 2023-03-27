@@ -16,7 +16,9 @@ services:
       args:
         - target=dev
     environment:
-      QUERY_MONITORING_TOOL_ENV: test
+      QUERY_MONITORING_TOOL_ENV: local
     volumes:
       - .:/usr/app/src
     working_dir: /usr/app/src
+    ports:
+      - "127.0.0.1:31222:31222"
