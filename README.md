@@ -1,4 +1,5 @@
 # query_monitoring
+practice to query databases with golang
 
 # FYI
 ## the way to connect mysql on qmgo
