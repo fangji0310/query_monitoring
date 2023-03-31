@@ -2,12 +2,12 @@ package policy
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"query_monitoring/pkg/db"
 
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,31 +28,24 @@ func (p MonitoringPolicy) IsExecute(batchStartTime time.Time) bool {
 	return (current-p.ScheduleOffsetMin)%p.ScheduleIntervalMin == 0
 }
 
-func (p MonitoringPolicy) Check(manager db.QueryManager) error {
-	fmt.Println("-- Executing %s\n", p.Title)
-	fmt.Println("-- offset: %d interval: %d\n", p.ScheduleOffsetMin, p.ScheduleIntervalMin)
-	metrics, err := manager.ExecuteQuery(p.Db, p.Query)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("name:%s count:%d\n", p.Title, metrics.Metrics)
-	return nil
+func (p MonitoringPolicy) Check(manager db.QueryManager) (db.Metrics, error) {
+	return manager.ExecuteQuery(p.Db, p.Query)
 }
 
-func LoadPolicy(filePath string) MonitoringPolicies {
+func LoadPolicy(logger *zap.Logger, filePath string) MonitoringPolicies {
 	b, ioerr := os.ReadFile(filePath)
 	if ioerr != nil {
-		log.Panic(ioerr)
+		logger.Panic(ioerr.Error())
 	}
 	var r MonitoringPolicies
 	yamlerr := yaml.Unmarshal(b, &r)
 	if yamlerr != nil {
-		log.Panic(yamlerr)
+		logger.Panic(yamlerr.Error())
 	}
-	fmt.Printf("Found %d monitoring policies.\n", len(r))
+	logger.Debug(fmt.Sprintf("Found %d monitoring policies.\n", len(r)))
 	for _, val := range r {
-		fmt.Printf("-- %s\n", val.Title)
-		fmt.Printf("-- %s\n", val.Db)
+		logger.Debug(fmt.Sprintf("-- %s\n", val.Title))
+		logger.Debug(fmt.Sprintf("-- %s\n", val.Db))
 	}
 	return r
 }

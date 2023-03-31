@@ -10,9 +10,11 @@ import (
 
 	"query_monitoring/pkg/db"
 	"query_monitoring/pkg/policy"
+	"query_monitoring/pkg/util"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 )
 
 type QueryMonitoringStruct struct {
@@ -22,23 +24,26 @@ type QueryMonitoringStruct struct {
 }
 
 func main() {
-	startTime := time.Now()
+	time.Local = time.FixedZone("JST", 9*60*60)
 	environment := loadEnvironment()
+	logger := util.NewLogger(environment)
+	startTime := time.Now()
 	q := loadQueryMonitoringSetting()
-	fmt.Printf("loading configuration manager. type: %s, ini: %s, yaml: %s\n", q.Type, q.IniPath, q.MonitoringYamlPath)
+	logger.Debug(fmt.Sprintf("loading configuration manager type: %s, ini: %s, yaml: %s\n", q.Type, q.IniPath, q.MonitoringYamlPath))
 	queryManager := db.InitializeFromIni(environment, q.IniPath)
-	fmt.Printf("loading policy yaml on %s\n", q.MonitoringYamlPath)
-	monitoringPolicies := policy.LoadPolicy(q.MonitoringYamlPath)
+	logger.Debug(fmt.Sprintf("loading policy yaml on %s\n", q.MonitoringYamlPath))
+	monitoringPolicies := policy.LoadPolicy(logger, q.MonitoringYamlPath)
 	for _, p := range monitoringPolicies {
 		if !p.IsExecute(startTime) {
-			fmt.Printf("skip %s\n", p.Title)
+			logger.Debug(fmt.Sprintf("skip %s\n", p.Title))
 			continue
 		}
-		err := p.Check(queryManager)
+		metrics, err := p.Check(queryManager)
 		if err != nil {
-			fmt.Printf("%w\n", err)
+			logger.Warn(fmt.Sprintf("%w\n", err))
 			continue
 		}
+		logger.Info(p.Title, zap.String("name", p.Title), zap.Int("count", metrics.Metrics))
 	}
 }
 
